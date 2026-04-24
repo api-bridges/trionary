@@ -45,6 +45,8 @@ typedef struct {
     char op_lexeme[4];
     OpType op;
     double value;
+    int is_var_ref;      /* 1 if operand is a variable reference */
+    char var_name[64];   /* variable name when is_var_ref == 1   */
 } Transform;
 
 typedef struct {
