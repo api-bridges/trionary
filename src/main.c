@@ -8,7 +8,7 @@
 
 void print_usage(const char* prog_name) {
     fprintf(stderr, "Usage: %s run <file.tri>\n", prog_name);
-    fprintf(stderr, "  Executes a Trionary v0 source file.\n");
+    fprintf(stderr, "  Executes a Trionary v0.3.0 source file.\n");
 }
 
 int main(int argc, char* argv[]) {

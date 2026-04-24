@@ -656,3 +656,78 @@ tests/test_trn_undef.expected         ← new
 tests/test_trn_var.expected           ← new
 tests/test_vars.expected              ← new
 ```
+
+---
+
+# Task 8 — Documentation & Release Prep: Completion Notes
+
+## What Was Done
+
+Task 8 from `plan.md` has been implemented in full. The goal was to update all documentation to reflect v0.3.0 and prepare the release.
+
+---
+
+## Changes Made
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `README.md` | Updated Features section (5 → 8 keywords); added `fn`/`end`/`use` to Keywords table and keyword subsections; updated `trn` description to mention full arithmetic expression RHS; added Functions and Modules sections (with syntax, parameter tables, usage notes); added CLI Input default-value documentation; added Named functions, Modules, and CLI arguments examples; updated Project Structure to include all new files and directories; updated v0.3.0 Changelog entry to cover all seven sub-tasks |
+| `IMPLEMENTATION_SUMMARY.md` | Rewrote to reflect v0.3.0: updated project structure (all new files), keyword count (8), AST node type table (both statement and expression nodes), language feature examples, implementation detail sections (lexer, parser, exec, error system), test results table, build commands, and design principles |
+| `src/main.c` | Bumped version string from `v0` to `v0.3.0` in `print_usage()` |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `CHANGELOG.md` | Full changelog with sections for v0.1.0, v0.2.0, and v0.3.0 |
+
+---
+
+## Design Decisions
+
+- **Single source of truth for the changelog.** `CHANGELOG.md` is the canonical version history. The `README.md` Changelog section is a concise summary of the same information, kept in sync.
+- **IMPLEMENTATION_SUMMARY.md rewritten, not appended.** The original document described only v0 (5 keywords, 3 statement types). A full rewrite was cleaner and more accurate than layering addenda onto a stale description.
+- **Version string in `main.c`.** The only version reference in source code is the usage message in `print_usage()`. It now reads `v0.3.0` to match the release.
+- **No behaviour change.** No logic was altered. All 16 automated tests continue to pass (`make test`: 16 passed, 0 failed).
+
+---
+
+## Verification
+
+```
+$ make clean && make
+$ make test
+PASS: test_all.tri
+PASS: test_arith.tri
+PASS: test_cli_args.tri
+PASS: test_error.tri
+PASS: test_fn.tri
+PASS: test_invalid.tri
+PASS: test_malformed.tri
+PASS: test_malformed_trn.tri
+PASS: test_mixed_arith_pipeline.tri
+PASS: test_modules.tri
+PASS: test_multi_pipeline.tri
+PASS: test_pipeline.tri
+PASS: test_trn_expr.tri
+PASS: test_trn_undef.tri
+PASS: test_trn_var.tri
+PASS: test_vars.tri
+
+Results: 16 passed, 0 failed
+```
+
+All 16 tests pass. No pre-existing test output changed.
+
+---
+
+## Files Touched (summary)
+
+```
+README.md                  ← features, keywords, functions section, modules section, project structure, examples, changelog
+IMPLEMENTATION_SUMMARY.md  ← full rewrite for v0.3.0
+src/main.c                 ← version string v0 → v0.3.0
+CHANGELOG.md               ← new
+```
