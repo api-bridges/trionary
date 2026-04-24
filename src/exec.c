@@ -5,22 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum {
-    EXPR_NUMBER,
-    EXPR_VARIABLE,
-    EXPR_BINARY
-} ExprType;
-
-typedef struct Expr {
-    ExprType type;
-    double num_val;
-    char var_name[64];
-    OpType op;
-    struct Expr* left;
-    struct Expr* right;
-    int line; /* source line where this expression token was seen */
-} Expr;
-
 /* djb2 hash, folded into [0, SCOPE_CAPACITY). */
 static unsigned int scope_hash(const char* name) {
     unsigned int h = 5381;
@@ -163,15 +147,7 @@ static double apply_condition(double val, Condition* cond) {
 }
 
 static double apply_transform(double val, Transform* trn, SymTable* sym) {
-    double operand;
-    if (trn->is_var_ref) {
-        if (!sym_exists(sym, trn->var_name)) {
-            error_at(trn->line, "Undefined variable '%s'", trn->var_name);
-        }
-        operand = sym_get(sym, trn->var_name);
-    } else {
-        operand = trn->value;
-    }
+    double operand = eval_expr(trn->expr, sym);
     switch (trn->op) {
         case OP_ADD: return val + operand;
         case OP_SUB: return val - operand;

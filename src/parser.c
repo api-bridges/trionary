@@ -5,29 +5,6 @@
 #include <string.h>
 #include <ctype.h>
 
-typedef enum {
-    EXPR_NUMBER,
-    EXPR_VARIABLE,
-    EXPR_BINARY
-} ExprType;
-
-typedef struct Expr {
-    ExprType type;
-    
-    // For NUMBER
-    double num_val;
-    
-    // For VARIABLE
-    char var_name[64];
-    
-    // For BINARY
-    OpType op;
-    struct Expr* left;
-    struct Expr* right;
-
-    int line; /* source line where this expression token was seen */
-} Expr;
-
 static int current = 0;
 static Token* tokens;
 static int token_count;
@@ -79,7 +56,7 @@ static Expr* parse_primary() {
         expr = create_expr(EXPR_NUMBER);
         expr->num_val = atof(tokens[current - 1].lexeme);
         expr->line = tokens[current - 1].line;
-    } else if (match(TOK_IDENT)) {
+    } else if (match(TOK_IDENT) || match(TOK_VAR_REF)) {
         expr = create_expr(EXPR_VARIABLE);
         strncpy(expr->var_name, tokens[current - 1].lexeme, 63);
         expr->var_name[63] = '\0';
@@ -262,19 +239,11 @@ static PipelineNode* parse_pipeline(int lst_line) {
             strncpy(trn->op_lexeme, tokens[current - 1].lexeme, 3);
             trn->op_lexeme[3] = '\0';
             trn->op = get_op_type(trn->op_lexeme);
-            trn->is_var_ref = 0;
-            trn->var_name[0] = '\0';
-            trn->value = 0.0;
             trn->line = trn_line;
+            trn->expr = parse_expr();
 
-            if (match(TOK_VAR_REF)) {
-                trn->is_var_ref = 1;
-                strncpy(trn->var_name, tokens[current - 1].lexeme, 63);
-                trn->var_name[63] = '\0';
-            } else if (match(TOK_NUMBER)) {
-                trn->value = atof(tokens[current - 1].lexeme);
-            } else {
-                error_at(peek().line, "Expected number or variable after transform operator");
+            if (!trn->expr) {
+                error_at(peek().line, "Expected expression after transform operator");
                 free(trn);
                 return node;
             }
@@ -361,8 +330,10 @@ void free_ast(ASTNode* ast) {
         if (ast->node.pipeline->list) free(ast->node.pipeline->list);
         if (ast->node.pipeline->filter) free(ast->node.pipeline->filter);
         if (ast->node.pipeline->transforms) {
-            for (int i = 0; i < ast->node.pipeline->transform_count; i++)
+            for (int i = 0; i < ast->node.pipeline->transform_count; i++) {
+                free_expr(ast->node.pipeline->transforms[i]->expr);
                 free(ast->node.pipeline->transforms[i]);
+            }
             free(ast->node.pipeline->transforms);
         }
         free(ast->node.pipeline);

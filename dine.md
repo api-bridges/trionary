@@ -1,12 +1,90 @@
+# Task 3 — Expression Improvements in `trn`: Completion Notes
+
+## What Was Done
+
+Task 3 from `plan.md` has been implemented in full. The goal was to allow full arithmetic expressions on the right-hand side of the `trn` pipeline stage, going beyond the old `op NUMBER` / `op VAR_REF` restriction.
+
+---
+
+## Convention
+
+The **pipeline element is the implicit left operand** of the leading operator. The right-hand side of the operator may be any arithmetic expression built from numeric literals and previously-assigned variables.
+
+Examples:
+- `trn * 10`          → `element * 10`
+- `trn * x`           → `element * x`
+- `trn * x + 1`       → `element * (x + 1)` *(right side evaluated first as a full expression)*
+- `trn + a * 2`       → `element + (a * 2)`
+
+There is no special `_` placeholder; the element is always implicitly the left operand of the leading operator and the right-hand expression is evaluated independently.
+
+---
+
+## Changes Made
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `include/parser.h` | Moved `ExprType` enum and `Expr` struct definition here (was private in `parser.c` and `exec.c`); replaced `Transform.value / is_var_ref / var_name` fields with a single `Expr* expr` pointer |
+| `src/parser.c` | Removed local `ExprType`/`Expr` definitions (now from `parser.h`); updated `parse_primary()` to accept `TOK_VAR_REF` as a variable identifier; replaced the `if (TOK_VAR_REF) … else if (TOK_NUMBER)` trn parsing block with a single `parse_expr()` call; updated `free_ast()` to call `free_expr()` on each transform's expression |
+| `src/exec.c` | Removed local `ExprType`/`Expr` definitions (now from `parser.h`); replaced the `is_var_ref` branch in `apply_transform()` with a single `eval_expr(trn->expr, sym)` call |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `tests/test_trn_expr.tri` | Verifies expression RHS in `trn`: `trn * x + 1`, `trn + a * 2`, and backward-compatible `trn * 10` |
+
+---
+
+## Design Decisions
+
+- **Backward compatibility preserved.** The old `trn * 10` and `trn * a` (compact no-space) syntax continues to work unchanged; they are now parsed as trivial single-node expressions (`EXPR_NUMBER` and `EXPR_VARIABLE` respectively).
+- **`Expr` moved to `parser.h`.** This was the minimal change needed to share the type between `parser.c`, `exec.c`, and the new `Transform.expr` field. The `ArithNode*`/`Expr*` cast used by the arithmetic-emit statement is unchanged.
+- **`parse_primary()` now accepts `TOK_VAR_REF`.** This token type is emitted by the lexer when an alphabetic identifier immediately follows an operator (e.g. `*x`). Making the expression parser understand it ensures compact and spaced forms are interchangeable.
+- **No `_` placeholder.** The leading operator already encodes the application of the pipeline element; a `_` binding would be redundant and would require a symbol-table side-effect during pipeline execution.
+
+---
+
+## Verification
+
+```
+$ make clean && make
+$ ./tri run tests/test_arith.tri              # → 15 / 14
+$ ./tri run tests/test_vars.tri               # → 15 / 70
+$ ./tri run tests/test_pipeline.tri           # → 120
+$ ./tri run tests/test_all.tri                # all expected values
+$ ./tri run tests/test_trn_var.tri            # → 120
+$ ./tri run tests/test_multi_pipeline.tri     # → 11 12 13 / 8 10 12
+$ ./tri run tests/test_mixed_arith_pipeline.tri
+$ ./tri run tests/test_trn_expr.tri           # → 12 16 20 / 21 22 23 / 120
+# Error cases — exit code 1 with correct message:
+$ ./tri run tests/test_invalid.tri
+$ ./tri run tests/test_malformed_trn.tri
+$ ./tri run tests/test_trn_undef.tri
+```
+
+All checks pass. No pre-existing test output changed.
+
+---
+
+## Files Touched (summary)
+
+```
+include/parser.h          ← added ExprType/Expr; Transform.expr replaces old fields
+src/parser.c              ← removed local Expr; TOK_VAR_REF in parse_primary; parse_expr() for trn
+src/exec.c                ← removed local Expr; apply_transform uses eval_expr
+tests/test_trn_expr.tri   ← new
+```
+
+---
+
 # Task 2 — Symbol Table Hardening: Completion Notes
 
 ## What Was Done
 
 Task 2 from `plan.md` has been implemented in full. The goal was to replace the flat 256-slot variable array with a hash-map-based scope stack, and expose a `scope_push()` / `scope_pop()` API to support upcoming function scopes.
-
----
-
-## Changes Made
 
 ### Modified Files
 
