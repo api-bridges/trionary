@@ -481,7 +481,7 @@ transform_stage ::= 'trn' OP NUMBER        /* unchanged */
 
 ### Changes in detail
 
-1. **`apply_transform()` signature extended** — The function now accepts a `SymTable* sym` third parameter. At the top of the function, a local `double operand` is resolved: if `trn->is_var_ref == 1` the function calls `sym_exists()` and, if the variable is absent, prints `"Error: Undefined variable '<name>' in trn"` to `stderr` and calls `exit(1)` to abort cleanly; if the variable exists, `sym_get()` returns its current value. When `is_var_ref == 0` the literal `trn->value` is used, preserving the unchanged v0.1.0 path exactly. All five arithmetic operators (`+`, `-`, `*`, `/`, `^`) now use `operand` instead of `trn->value`.
+1. **`apply_transform()` signature extended** — The function now accepts a `SymTable* sym` third parameter. At the top of the function, a local `double operand` is resolved: if `trn->is_var_ref == 1` the function calls `sym_exists()` and, if the variable is absent, prints `"Error: Undefined variable '<name>'"` to `stderr` and calls `exit(1)` to abort cleanly; if the variable exists, `sym_get()` returns its current value. When `is_var_ref == 0` the literal `trn->value` is used, preserving the unchanged v0.1.0 path exactly. All five arithmetic operators (`+`, `-`, `*`, `/`, `^`) now use `operand` instead of `trn->value`.
 
 2. **`exec_pipeline()` signature extended** — Accepts a new `SymTable* sym` parameter and forwards it to every `apply_transform()` call inside the element loop.
 

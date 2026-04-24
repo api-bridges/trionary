@@ -117,7 +117,7 @@ static double apply_transform(double val, Transform* trn, SymTable* sym) {
     double operand;
     if (trn->is_var_ref) {
         if (!sym_exists(sym, trn->var_name)) {
-            fprintf(stderr, "Error: Undefined variable '%s' in trn\n", trn->var_name);
+            fprintf(stderr, "Error: Undefined variable '%s'\n", trn->var_name);
             exit(1);
         }
         operand = sym_get(sym, trn->var_name);
