@@ -9,7 +9,12 @@
  * This is the single, centralised error-reporting point for the entire
  * interpreter.  All parse-time and runtime errors must go through here
  * so that the format stays consistent and fail-fast behaviour is enforced.
+ *
+ * Declared noreturn so the compiler can omit dead code after every call site.
  */
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((noreturn))
+#endif
 void error_at(int line, const char *fmt, ...);
 
 #endif

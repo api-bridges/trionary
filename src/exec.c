@@ -63,7 +63,6 @@ double sym_get(SymTable* t, const char* name) {
         }
     }
     error_at(0, "Undefined variable '%s'", name);
-    return 0.0; /* unreachable */
 }
 
 static double eval_expr(Expr* expr, SymTable* sym) {
@@ -76,7 +75,6 @@ static double eval_expr(Expr* expr, SymTable* sym) {
         case EXPR_VARIABLE:
             if (!sym_exists(sym, expr->var_name)) {
                 error_at(expr->line, "Undefined variable '%s'", expr->var_name);
-                return 0.0; /* unreachable */
             }
             return sym_get(sym, expr->var_name);
             
@@ -124,7 +122,6 @@ static double apply_transform(double val, Transform* trn, SymTable* sym) {
     if (trn->is_var_ref) {
         if (!sym_exists(sym, trn->var_name)) {
             error_at(trn->line, "Undefined variable '%s'", trn->var_name);
-            return 0.0; /* unreachable */
         }
         operand = sym_get(sym, trn->var_name);
     } else {
