@@ -1,0 +1,5 @@
+# Step 7: trn with a valid variable reference
+# a = 10, filter values >2 from [1..5] → 3,4,5; multiply each by a (10); sum = 120
+a = 10
+lst [1,2,3,4,5] | whn >2 | trn *a | sum
+emt

@@ -1,0 +1,2 @@
+# Step 7: trn with an undefined variable — must produce a clear error
+lst [1,2,3] | trn *undef -> emt
