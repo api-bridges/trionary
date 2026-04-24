@@ -294,7 +294,7 @@ ASTNode* parse(Token* tok, int count) {
         ast->node.assign = parse_assign();
     } else if (tokens[0].type == TOK_NUMBER || tokens[0].type == TOK_IDENT) {
         ast->stmt_type = STMT_ARITH;
-        ast->node.arith = parse_expr();
+        ast->node.arith = (ArithNode*)parse_expr();
         
         if (match(TOK_ARROW)) {
             if (!match(TOK_EMT)) {
