@@ -648,3 +648,38 @@ Error: Expected number or variable after transform operator at line 3
 - All eight existing `.tri` test files (`test_arith.tri`, `test_vars.tri`, `test_pipeline.tri`, `test_all.tri`, `demo.tri`, `test_error.tri`, `test_invalid.tri`, `test_malformed.tri`) were re-run after adding the new files.
 - Every file produced **byte-for-byte identical** stdout, stderr, and exit code to the baseline recorded in Section 8.
 - No source file was modified; this step adds test data only.
+
+---
+
+## 17. What Was Done (Step 8 Summary)
+
+**Goal:** Execute `tri run` against every existing test file in `tests/` and confirm that all outputs are byte-for-byte identical to the v0.1.0 results captured in Section 8. Any deviation is a blocker before proceeding to Step 9.
+
+### Method
+
+The project was already compiled (`make` reported `tri` up to date). Each of the eight legacy test files was run with:
+
+```sh
+./tri run <file>
+```
+
+stdout, stderr, and exit code were captured and compared against the Section 8 baseline.
+
+### Results
+
+| Test file | stdout match | stderr match | exit code match | Status |
+|-----------|-------------|-------------|-----------------|--------|
+| `tests/test_arith.tri` | `15\n14` ✓ | *(empty)* ✓ | 0 ✓ | **PASS** |
+| `tests/test_vars.tri` | `15\n70` ✓ | *(empty)* ✓ | 0 ✓ | **PASS** |
+| `tests/test_pipeline.tri` | `120` ✓ | *(empty)* ✓ | 0 ✓ | **PASS** |
+| `tests/test_all.tri` | 15-line block ✓ | *(empty)* ✓ | 0 ✓ | **PASS** |
+| `tests/demo.tri` | 15-line block ✓ | *(empty)* ✓ | 0 ✓ | **PASS** |
+| `tests/test_error.tri` | `15` ✓ | *(empty)* ✓ | 0 ✓ | **PASS** |
+| `tests/test_invalid.tri` | `0` ✓ | two-line error block ✓ | 0 ✓ | **PASS** |
+| `tests/test_malformed.tri` | `15` ✓ | *(empty)* ✓ | 0 ✓ | **PASS** |
+
+All 8 tests: **PASS — zero deviations from the v0.1.0 baseline.**
+
+### Conclusion
+
+The full regression suite is green. No v0.2.0 change (Steps 2–7) introduced any regression in existing behaviour. Proceeding to Step 9 is unblocked.
