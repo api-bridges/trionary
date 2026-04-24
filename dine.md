@@ -568,3 +568,83 @@ transform_stage ::= 'trn' OP NUMBER        /* unchanged */
 - The only **stderr** change is in `tests/test_invalid.tri`: the `"Error: Undefined variable 'print'"` message now reads `"Error: Undefined variable 'print' at line 1"` — the baseline in this document has been updated accordingly.
 - No existing token type, AST node type, or execution path was removed or altered.
 - The `Condition.line` and `Transform.line` fields are zero-initialised; the `Expr.line` field is set to `0` in `create_expr()` and then overwritten to the real token line in `parse_primary()`, so there is no uninitialised-memory risk.
+
+---
+
+## 16. What Was Done (Step 7 Summary)
+
+**Goal:** Add five new `.tri` test files to `tests/` that exercise the features introduced in Steps 2–6 (variable references in `trn`, error messages with line numbers, and multiple pipelines per file).
+
+### Files added
+
+| File | Purpose |
+|------|---------|
+| `tests/test_trn_var.tri` | `trn` with a valid variable reference (`*a`); sets `a = 10`, filters `[1,2,3,4,5]` to values `>2`, multiplies each by `a`, sums → `120` |
+| `tests/test_trn_undef.tri` | `trn` with an undefined variable (`*undef`); must produce `Error: Undefined variable 'undef' at line N` on stderr and exit 1 |
+| `tests/test_multi_pipeline.tri` | Two complete `lst … emt` pipelines in one file; first adds 10 to `[1,2,3]` → `11 12 13`, second doubles `[4,5,6]` → `8 10 12` |
+| `tests/test_malformed_trn.tri` | Operator present but operand missing (`trn *`); must produce `Error: Expected number or variable after transform operator at line N` and exit 1 |
+| `tests/test_mixed_arith_pipeline.tri` | Assigns `scale = 5`, emits `2 * scale` → `10`, then runs pipeline `lst [1,2,3,4] \| trn *scale` → `5 10 15 20` |
+
+### Expected outputs
+
+#### `tests/test_trn_var.tri`
+**stdout:**
+```
+120
+```
+**stderr:** *(empty)*  **exit:** 0
+
+---
+
+#### `tests/test_trn_undef.tri`
+**stdout:** *(empty)*
+**stderr:**
+```
+Error: Undefined variable 'undef' at line 2
+```
+**exit:** 1
+
+---
+
+#### `tests/test_multi_pipeline.tri`
+**stdout:**
+```
+11
+12
+13
+8
+10
+12
+```
+**stderr:** *(empty)*  **exit:** 0
+
+---
+
+#### `tests/test_malformed_trn.tri`
+**stdout:** *(empty)*
+**stderr:**
+```
+Error: Expected number or variable after transform operator at line 3
+```
+**exit:** 1
+
+---
+
+#### `tests/test_mixed_arith_pipeline.tri`
+**stdout:**
+```
+10
+5
+10
+15
+20
+```
+**stderr:** *(empty)*  **exit:** 0
+
+---
+
+### Backward-compatibility verification
+
+- All eight existing `.tri` test files (`test_arith.tri`, `test_vars.tri`, `test_pipeline.tri`, `test_all.tri`, `demo.tri`, `test_error.tri`, `test_invalid.tri`, `test_malformed.tri`) were re-run after adding the new files.
+- Every file produced **byte-for-byte identical** stdout, stderr, and exit code to the baseline recorded in Section 8.
+- No source file was modified; this step adds test data only.

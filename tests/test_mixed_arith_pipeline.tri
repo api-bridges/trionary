@@ -1,0 +1,5 @@
+# Step 7: arithmetic variable assignment followed by a pipeline using that variable
+# scale = 5; arithmetic emit: 2 * scale = 10; pipeline: multiply [1,2,3,4] by scale → 5,10,15,20
+scale = 5
+2 * scale -> emt
+lst [1,2,3,4] | trn *scale -> emt

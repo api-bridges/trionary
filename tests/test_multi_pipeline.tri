@@ -1,0 +1,5 @@
+# Step 7: two complete lst…emt pipelines in one file
+# First pipeline: add 10 to each of [1,2,3] → 11, 12, 13
+lst [1,2,3] | trn +10 -> emt
+# Second pipeline: double each of [4,5,6] → 8, 10, 12
+lst [4,5,6] | trn *2 -> emt
