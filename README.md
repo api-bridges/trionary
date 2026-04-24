@@ -23,6 +23,7 @@ Trionary is a statically-structured scripting language built around five keyword
 - [Project Structure](#project-structure)
 - [Design Principles](#design-principles)
 - [Contributing](#contributing)
+- [Changelog](#changelog)
 - [License](#license)
 
 ---
@@ -296,6 +297,51 @@ trionary/
 5. Open a pull request
 
 Please keep changes focused and minimal. New language features should follow the existing design principles.
+
+---
+
+## Changelog
+
+### v0.2.0
+
+#### New Features
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | **Variable references in `trn`** | The `trn` keyword now accepts a variable name as its operand in addition to a literal number (e.g. `trn *scale`). The variable is resolved against the symbol table at execution time, so it always reflects the value most recently assigned before the pipeline runs. |
+| 2 | **Line-numbered error messages** | All runtime error messages now include the source line number (e.g. `Error: Undefined variable 'x' at line 3`). This applies to undefined-variable errors in both arithmetic expressions and pipeline transforms. The lexer already included line numbers; this change makes the executor consistent. |
+| 3 | **Multiple pipelines per file** | A single `.tri` file may now contain any number of complete `lst … emt` pipelines. Each pipeline's internal state (filter, transform, sum flag) is reset between runs while the symbol table remains shared, so variables assigned before or between pipelines are visible to all subsequent pipelines. |
+
+#### Error-Message Format
+
+Errors are written to `stderr` and follow this format:
+
+```
+Error: <description> at line <N>
+```
+
+**Examples:**
+
+```
+Error: Undefined variable 'scale' at line 5
+Error: Expected number or variable after transform operator at line 3
+Error: Unexpected character '"' at line 1
+```
+
+The program exits with code `1` on fatal errors and `0` on success.
+
+#### Strict Constraints Preserved
+
+The following v0.1.0 behaviours are **unchanged** in v0.2.0:
+
+- All five keyword spellings (`lst`, `whn`, `trn`, `sum`, `emt`) are immutable.
+- No existing `TokenType` value was removed or renumbered.
+- `SymTable` maximum capacity (256 variables) and linear-scan semantics are unchanged.
+- `emit_value()` output format (integers without decimal point, floats with `%.6g`) is unchanged.
+- Pipeline execution order (filter → transform → aggregate/emit) is unchanged.
+- `assign_stmt` still accepts only `IDENT = NUMBER` (literal number on the right-hand side).
+- Errors continue going to `stderr`; normal output goes to `stdout`.
+- All v0.1.0 regression test files produce byte-for-byte identical stdout, stderr, and exit codes.
 
 ---
 
