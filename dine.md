@@ -781,3 +781,62 @@ All eight existing baseline test files were re-run after Step 9 validation:
 ### Conclusion
 
 All five v0.2.0 edge cases verified. Every new test produced output byte-for-byte identical to the expected values from Step 7. All eight v0.1.0 regression tests continue to pass. The implementation is clear to proceed to Step 10.
+
+---
+
+## 19. What Was Done (Step 10 Summary)
+
+**Goal:** Add a v0.2.0 changelog section to `README.md`, document the new error-message format with a brief example, and tag the commit as `v0.2.0`.
+
+### Files modified
+
+| File | Change |
+|------|--------|
+| `README.md` | Added `Changelog` entry to the Table of Contents. Added a `## Changelog` section at the bottom of the file (above `## License`) containing: (1) a table of the three new v0.2.0 features with descriptions, (2) a "Error-Message Format" subsection with the format template and three concrete examples, and (3) a "Strict Constraints Preserved" subsection listing all eight backward-compatibility guarantees. |
+
+### Changes in detail
+
+1. **Table of Contents** — Added `- [Changelog](#changelog)` between `Contributing` and `License` so readers can navigate directly to the version history.
+
+2. **v0.2.0 Changelog section** — Documents the three new features:
+   - Variable references in `trn` (`trn *varname` — value resolved at execution time from the symbol table)
+   - Line-numbered error messages (`Error: <description> at line <N>`)
+   - Multiple pipelines per file (symbol table shared, pipeline-internal state reset between each)
+
+3. **Error-message format** — Template and three examples shown inline so users can recognise and understand the diagnostic output without reading source code.
+
+4. **Constraints preserved** — Lists all eight v0.1.0 behaviours guaranteed unchanged, making it explicit that v0.2.0 is fully backward-compatible.
+
+5. **Git tag** — Commit tagged as `v0.2.0` after confirming all 13 tests (8 regression + 5 new) pass.
+
+### Pre-tagging test run
+
+All tests were executed with `./tri run <file>` immediately before the tag was created:
+
+| Test file | Status |
+|-----------|:------:|
+| `tests/test_arith.tri` | **PASS** |
+| `tests/test_vars.tri` | **PASS** |
+| `tests/test_pipeline.tri` | **PASS** |
+| `tests/test_all.tri` | **PASS** |
+| `tests/demo.tri` | **PASS** |
+| `tests/test_error.tri` | **PASS** |
+| `tests/test_invalid.tri` | **PASS** |
+| `tests/test_malformed.tri` | **PASS** |
+| `tests/test_trn_var.tri` | **PASS** |
+| `tests/test_trn_undef.tri` | **PASS** |
+| `tests/test_multi_pipeline.tri` | **PASS** |
+| `tests/test_malformed_trn.tri` | **PASS** |
+| `tests/test_mixed_arith_pipeline.tri` | **PASS** |
+
+**All 13 tests passed (8 regression + 5 new). Zero deviations detected.**
+
+### Backward-compatibility verification
+
+- No source file (`*.c`, `*.h`) was modified in Step 10.
+- All existing stdout/stderr/exit-code outputs remain byte-for-byte identical to the v0.1.0 baseline recorded in Section 8.
+- The README change is purely additive (a new section appended after `Contributing`).
+
+### Conclusion
+
+Step 10 is complete. `README.md` now documents the three new v0.2.0 features, the error-message format with examples, and all eight backward-compatibility constraints. The commit has been tagged `v0.2.0`. All 13 tests pass. The v0.2.0 release is complete.
