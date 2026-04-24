@@ -15,6 +15,23 @@ typedef enum {
     OP_GT, OP_LT, OP_GTE, OP_LTE, OP_EQ, OP_NEQ
 } OpType;
 
+/* Expression node shared by arithmetic statements and trn expressions. */
+typedef enum {
+    EXPR_NUMBER,
+    EXPR_VARIABLE,
+    EXPR_BINARY
+} ExprType;
+
+typedef struct Expr {
+    ExprType      type;
+    double        num_val;
+    char          var_name[64];
+    OpType        op;
+    struct Expr  *left;
+    struct Expr  *right;
+    int           line; /* source line where this expression token was seen */
+} Expr;
+
 typedef struct ArithNode {
     NodeType type;
     OpType op;
@@ -45,12 +62,10 @@ typedef struct {
 } Condition;
 
 typedef struct {
-    char op_lexeme[4];
+    char   op_lexeme[4];
     OpType op;
-    double value;
-    int is_var_ref;      /* 1 if operand is a variable reference */
-    char var_name[64];   /* variable name when is_var_ref == 1   */
-    int line;            /* source line where this transform was parsed */
+    Expr  *expr;         /* full right-hand arithmetic expression */
+    int    line;         /* source line where this transform was parsed */
 } Transform;
 
 typedef struct {

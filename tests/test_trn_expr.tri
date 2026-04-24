@@ -1,0 +1,26 @@
+# Task 3: full arithmetic expression on the right-hand side of trn
+#
+# Convention: the pipeline element is the implicit left operand of the
+# leading operator; the right-hand side may be any arithmetic expression
+# involving literals and previously-defined variables.
+#
+# Test A: trn * x + 1
+#   x = 3; [1,2,3,4,5] | whn >2 | trn * x + 1
+#   elements passing filter: 3, 4, 5
+#   transform:  3 * (3+1)=12,  4 * (3+1)=16,  5 * (3+1)=20
+#   Expected: 12, 16, 20
+x = 3
+lst [1,2,3,4,5] | whn >2 | trn * x + 1 -> emt
+
+# Test B: trn + a * 2  (scalar addition of an expression)
+#   a = 10; [1,2,3] | trn + a * 2
+#   transform:  1 + (10*2)=21,  2 + (10*2)=22,  3 + (10*2)=23
+#   Expected: 21, 22, 23
+a = 10
+lst [1,2,3] | trn + a * 2 -> emt
+
+# Test C: trn *10 (existing literal syntax still works)
+#   [2,4,6] | trn * 10 | sum  →  20+40+60 = 120
+#   Expected: 120
+lst [2,4,6] | trn * 10 | sum
+emt
