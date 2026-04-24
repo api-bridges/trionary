@@ -437,3 +437,32 @@ The following behaviours must be **preserved unchanged** by every v0.2.0 step:
 - No existing token type was removed, renamed, or renumbered.
 - The existing `TOK_IDENT` path (alphabetic chars after whitespace) is completely untouched.
 - The `TOK_VAR_REF` path only fires when an operator is followed **without whitespace** by an alphabetic character — a pattern absent from all v0.1.0 test inputs.
+
+---
+
+## 12. What Was Done (Step 3 Summary)
+
+**Goal:** Extend the parser's `trn` rule to accept a variable reference (a `TOK_VAR_REF` token produced by Step 2's lexer change) in addition to a literal number operand. The variable name is stored in the AST at parse time so that value look-up is deferred to execution time (Step 4).
+
+### Files modified
+
+| File | Change |
+|------|--------|
+| `include/parser.h` | Extended the `Transform` struct with two new fields: `int is_var_ref` (flag, 0 for literal / 1 for variable) and `char var_name[64]` (the variable name when `is_var_ref == 1`). No existing field was removed or renamed. |
+| `src/parser.c` | In `parse_pipeline()`, replaced the single `TOK_NUMBER` branch after the `trn` operator with a three-way branch: match `TOK_VAR_REF` → set `is_var_ref = 1` and copy the name; match `TOK_NUMBER` → set `value` as before; otherwise → emit error `"Expected number or variable after transform operator"`. New fields are always zero-initialised before the branch so literal-number paths are unaffected. |
+
+### Grammar change (additive)
+
+```
+transform_stage ::= 'trn' OP NUMBER        /* unchanged */
+                  | 'trn' OP VAR_REF       /* new: variable-reference operand */
+```
+
+`whn`, `lst`, `sum`, `emt`, and all arithmetic/assignment paths are **syntactically unchanged**.
+
+### Backward-compatibility verification
+
+- All eight existing `.tri` test files (`test_arith.tri`, `test_vars.tri`, `test_pipeline.tri`, `test_all.tri`, `demo.tri`, `test_error.tri`, `test_invalid.tri`, `test_malformed.tri`) were rebuilt and re-run after the change.
+- Every file produced **byte-for-byte identical** stdout, stderr, and exit code to the v0.1.0 baseline recorded in Section 8.
+- No existing token type, AST node type, or executor path was removed or altered.
+- The `apply_transform()` function in `exec.c` remains untouched; it still reads `trn->value`, which is initialised to `0.0` for variable-reference nodes (Step 4 will add the symbol-table lookup).

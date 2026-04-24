@@ -254,13 +254,21 @@ static PipelineNode* parse_pipeline() {
             strncpy(trn->op_lexeme, tokens[current - 1].lexeme, 3);
             trn->op_lexeme[3] = '\0';
             trn->op = get_op_type(trn->op_lexeme);
+            trn->is_var_ref = 0;
+            trn->var_name[0] = '\0';
+            trn->value = 0.0;
             
-            if (!match(TOK_NUMBER)) {
-                error("Expected number after transform operator", peek().line);
+            if (match(TOK_VAR_REF)) {
+                trn->is_var_ref = 1;
+                strncpy(trn->var_name, tokens[current - 1].lexeme, 63);
+                trn->var_name[63] = '\0';
+            } else if (match(TOK_NUMBER)) {
+                trn->value = atof(tokens[current - 1].lexeme);
+            } else {
+                error("Expected number or variable after transform operator", peek().line);
                 free(trn);
                 return node;
             }
-            trn->value = atof(tokens[current - 1].lexeme);
             
             node->transform = trn;
             node->has_transform = 1;
