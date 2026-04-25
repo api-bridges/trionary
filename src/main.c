@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 #include "reader.h"
 #include "lexer.h"
 #include "parser.h"
@@ -9,15 +10,174 @@
 
 #define TRI_VERSION "Trionary v0.3.2"
 
+/* Returns 1 if the two files have identical contents, 0 otherwise. */
+static int files_equal(const char* path1, const char* path2) {
+    FILE* f1 = fopen(path1, "rb");
+    FILE* f2 = fopen(path2, "rb");
+    if (!f1 || !f2) { if (f1) fclose(f1); if (f2) fclose(f2); return 0; }
+    int equal = 1;
+    int c1, c2;
+    while (1) {
+        c1 = fgetc(f1);
+        c2 = fgetc(f2);
+        if (c1 != c2) { equal = 0; break; }
+        if (c1 == EOF) break;
+    }
+    fclose(f1);
+    fclose(f2);
+    return equal;
+}
+
+/* qsort comparator for an array of char* pointers. */
+static int cmp_strptr(const void* a, const void* b) {
+    return strcmp(*(const char* const*)a, *(const char* const*)b);
+}
+
+/* Run all test_*.tri files found in 'dir' against their .expected files.
+   'exe' is the path to the interpreter (argv[0] from main).
+   Returns 0 if every test passes, 1 if any test fails. */
+static int run_tests(const char* dir, const char* exe) {
+    DIR* d = opendir(dir);
+    if (!d) {
+        fprintf(stderr, "Error: Cannot open test directory '%s'\n", dir);
+        return 1;
+    }
+
+    /* Collect paths of test_*.tri files. */
+    char** files = NULL;
+    int nfiles = 0, cap = 0;
+    struct dirent* entry;
+    while ((entry = readdir(d)) != NULL) {
+        const char* name = entry->d_name;
+        size_t namelen   = strlen(name);
+        if (namelen <= 4 ||
+            strncmp(name, "test_", 5) != 0 ||
+            strcmp(name + namelen - 4, ".tri") != 0)
+            continue;
+        size_t plen = strlen(dir) + 1 + namelen + 1;
+        char* path = malloc(plen);
+        if (!path) continue;
+        snprintf(path, plen, "%s/%s", dir, name);
+        if (nfiles >= cap) {
+            cap = cap ? cap * 2 : 16;
+            char** tmp = realloc(files, cap * sizeof(char*));
+            if (!tmp) { free(path); continue; }
+            files = tmp;
+        }
+        files[nfiles++] = path;
+    }
+    closedir(d);
+
+    /* Sort alphabetically for a consistent, deterministic run order. */
+    if (nfiles > 0)
+        qsort(files, nfiles, sizeof(char*), cmp_strptr);
+
+    int pass = 0, fail = 0;
+
+    for (int i = 0; i < nfiles; i++) {
+        const char* tri_path = files[i];
+        size_t tri_len       = strlen(tri_path);
+
+        /* Derive the base path (strip the ".tri" suffix). */
+        char base[1024];
+        if (tri_len - 4 >= sizeof(base)) { fail++; continue; }
+        memcpy(base, tri_path, tri_len - 4);
+        base[tri_len - 4] = '\0';
+
+        /* Short display name (basename only). */
+        const char* tname = strrchr(tri_path, '/');
+        tname = tname ? tname + 1 : tri_path;
+
+        /* Skip if there is no .expected file. */
+        char expected[1024];
+        snprintf(expected, sizeof(expected), "%s.expected", base);
+        {
+            FILE* ef = fopen(expected, "r");
+            if (!ef) { printf("SKIP: %s (no .expected file)\n", tname); continue; }
+            fclose(ef);
+        }
+
+        /* Read optional extra CLI arguments from a .args file (one line). */
+        char args_str[512] = "";
+        char args_path[1024];
+        snprintf(args_path, sizeof(args_path), "%s.args", base);
+        {
+            FILE* af = fopen(args_path, "r");
+            if (af) {
+                if (fgets(args_str, sizeof(args_str), af)) {
+                    size_t alen = strlen(args_str);
+                    while (alen > 0 &&
+                           (args_str[alen - 1] == '\n' || args_str[alen - 1] == '\r'))
+                        args_str[--alen] = '\0';
+                }
+                fclose(af);
+            }
+        }
+
+        /* Determine stdin source (a .stdin file or /dev/null). */
+        char stdin_path[1024];
+        snprintf(stdin_path, sizeof(stdin_path), "%s.stdin", base);
+        int has_stdin;
+        {
+            FILE* sf = fopen(stdin_path, "r");
+            has_stdin = (sf != NULL);
+            if (sf) fclose(sf);
+        }
+        const char* stdin_src = has_stdin ? stdin_path : "/dev/null";
+
+        /* Create a temporary file to capture combined stdout + stderr. */
+        char tmp_path[] = "/tmp/tri_test_XXXXXX";
+        int tmp_fd = mkstemp(tmp_path);
+        if (tmp_fd < 0) {
+            fprintf(stderr, "Error: mkstemp failed\n");
+            fail++;
+            continue;
+        }
+        close(tmp_fd);
+
+        /* Build and execute the shell command. */
+        char cmd[4096];
+        if (args_str[0]) {
+            snprintf(cmd, sizeof(cmd),
+                     "\"%s\" run \"%s\" %s < \"%s\" > \"%s\" 2>&1",
+                     exe, tri_path, args_str, stdin_src, tmp_path);
+        } else {
+            snprintf(cmd, sizeof(cmd),
+                     "\"%s\" run \"%s\" < \"%s\" > \"%s\" 2>&1",
+                     exe, tri_path, stdin_src, tmp_path);
+        }
+        system(cmd);
+
+        /* Compare output against the expected file. */
+        if (files_equal(tmp_path, expected)) {
+            printf("PASS: %s\n", tname);
+            pass++;
+        } else {
+            printf("FAIL: %s\n", tname);
+            fail++;
+        }
+        remove(tmp_path);
+    }
+
+    for (int i = 0; i < nfiles; i++) free(files[i]);
+    free(files);
+
+    printf("\nResults: %d passed, %d failed\n", pass, fail);
+    return fail > 0 ? 1 : 0;
+}
+
 void print_help(const char* prog_name) {
     printf("Usage: %s <command> [arguments]\n\n", prog_name);
     printf("Commands:\n");
     printf("  run <file.tri> [arg0 arg1 ...]   Execute a Trionary source file\n");
+    printf("  test [dir]                       Run tests in dir (default: ./tests)\n");
     printf("  help                             Show this help message\n");
     printf("  version                          Print the interpreter version\n");
     printf("\nExamples:\n");
     printf("  %s run script.tri\n", prog_name);
     printf("  %s run script.tri 10 20\n", prog_name);
+    printf("  %s test\n", prog_name);
+    printf("  %s test ./mytests\n", prog_name);
 }
 
 int main(int argc, char* argv[]) {
@@ -33,6 +193,11 @@ int main(int argc, char* argv[]) {
     if (strcmp(argv[1], "version") == 0) {
         printf("%s\n", TRI_VERSION);
         return 0;
+    }
+
+    if (strcmp(argv[1], "test") == 0) {
+        const char* test_dir = (argc >= 3) ? argv[2] : "./tests";
+        return run_tests(test_dir, argv[0]);
     }
 
     if (strcmp(argv[1], "run") != 0) {
