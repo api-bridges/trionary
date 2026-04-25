@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "error.h"
+#include "lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -460,6 +461,16 @@ ASTNode* parse(Token* tok, int count) {
         ast->stmt_type = STMT_ASSIGN;
         ast->node.assign = parse_assign();
     } else if (tokens[0].type == TOK_NUMBER || tokens[0].type == TOK_IDENT) {
+        /* Check for keyword misspellings at statement position. */
+        if (tokens[0].type == TOK_IDENT) {
+            const char* suggestion = suggest_keyword(tokens[0].lexeme);
+            if (suggestion) {
+                char hint_msg[128];
+                snprintf(hint_msg, sizeof(hint_msg), "Did you mean '%s'?", suggestion);
+                set_error_hint(hint_msg);
+                error_at(tokens[0].line, "Unknown keyword '%s'", tokens[0].lexeme);
+            }
+        }
         ast->stmt_type = STMT_ARITH;
         ast->node.arith = (ArithNode*)parse_coalesce();
 

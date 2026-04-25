@@ -30,4 +30,10 @@ typedef struct {
 
 Token* tokenise(const char* src, int* count);
 
+/* suggest_keyword: if 'word' is a common misspelling of a Trionary keyword,
+ * return the correct keyword string; otherwise return NULL.
+ * Used by the parser to emit actionable "Did you mean?" hints.
+ */
+const char* suggest_keyword(const char* word);
+
 #endif

@@ -36,6 +36,10 @@ int main(int argc, char* argv[]) {
 
     if (strcmp(argv[1], "run") != 0) {
         fprintf(stderr, "Error: Unknown command '%s'\n", argv[1]);
+        size_t cmd_len = strlen(argv[1]);
+        if (cmd_len > 4 && strcmp(argv[1] + cmd_len - 4, ".tri") == 0) {
+            fprintf(stderr, "  Did you mean 'tri run %s'?\n", argv[1]);
+        }
         print_help(argv[0]);
         return 1;
     }
@@ -50,7 +54,7 @@ int main(int argc, char* argv[]) {
     char* source = read_file(filename);
     
     if (source == NULL) {
-        fprintf(stderr, "Error: Could not read file '%s'\n", filename);
+        fprintf(stderr, "Error: %s\n", get_reader_error());
         return 1;
     }
 

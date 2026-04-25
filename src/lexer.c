@@ -215,3 +215,25 @@ Token* tokenise(const char* src, int* count) {
     *count = n;
     return tokens;
 }
+
+/* Static table of common keyword misspellings mapped to the correct keyword. */
+const char* suggest_keyword(const char* word) {
+    static const struct { const char* from; const char* to; } hints[] = {
+        { "list",      "lst"  },
+        { "when",      "whn"  },
+        { "transform", "trn"  },
+        { "trans",     "trn"  },
+        { "emit",      "emt"  },
+        { "function",  "fn"   },
+        { "func",      "fn"   },
+        { "input",     "inpt" },
+        { "inp",       "inpt" },
+        { "summary",   "sum"  },
+        { "summ",      "sum"  },
+    };
+    for (size_t i = 0; i < sizeof(hints) / sizeof(hints[0]); i++) {
+        if (strcmp(word, hints[i].from) == 0)
+            return hints[i].to;
+    }
+    return NULL;
+}
