@@ -927,3 +927,138 @@ All 19 tests pass. No pre-existing test output changed.
 ```
 src/main.c   ← TRI_VERSION macro; print_help(); version + help subcommands; no-arg → help
 ```
+
+---
+
+# v0.3.2 — Step 3 & Step 4: Improved File Errors and Syntax-Error Hints: Completion Notes
+
+## What Was Done
+
+Implemented **Step 3** (U4 — improved file-error messages) and **Step 4** (U7 — syntax-error hints) from `plan.md`.
+
+---
+
+## Step 3 — Improved File-Error Messages (U4)
+
+### File-not-found / unreadable-file errors
+
+`read_file()` in `src/reader.c` now inspects `errno` after a failed `fopen` call and sets a specific, actionable error message:
+
+| Condition | Error printed |
+|-----------|---------------|
+| File does not exist (`ENOENT`) | `Error: File '<path>' not found.` |
+| Permission denied (`EACCES`) | `Error: Cannot read '<path>' — permission denied.` |
+| Other OS error | `Error: Cannot open file '<path>'.` |
+| File exists but is empty | `Error: File '<path>' is empty.` |
+| Out of memory | `Error: Out of memory reading '<path>'.` |
+
+The message is stored in a module-level static buffer and retrieved by the new `get_reader_error()` getter, which is called by `src/main.c` after `read_file()` returns `NULL`.
+
+### "Did you mean 'tri run file.tri'?" hint
+
+When an unknown subcommand is given that ends in `.tri`, the interpreter now prints a targeted hint before the usage summary:
+
+```
+$ ./tri script.tri
+Error: Unknown command 'script.tri'
+  Did you mean 'tri run script.tri'?
+Usage: ./tri <command> [arguments]
+…
+```
+
+---
+
+## Step 4 — Syntax-Error Hints (U7)
+
+### Hint table
+
+A static table of common keyword misspellings was added to `src/lexer.c`:
+
+| Typed word | Suggested keyword |
+|------------|-------------------|
+| `list`     | `lst`  |
+| `when`     | `whn`  |
+| `transform` / `trans` | `trn` |
+| `emit`     | `emt`  |
+| `function` / `func`   | `fn`  |
+| `input` / `inp`       | `inpt`|
+| `summary` / `summ`    | `sum` |
+
+### How hints are emitted
+
+A new `set_error_hint(const char*)` function in `src/error.c` registers a one-line hint. The hint is printed immediately after the next `error_at()` call and then cleared:
+
+```
+Error: Unknown keyword 'list' at line 1
+  Hint: Did you mean 'lst'?
+```
+
+In `src/parser.c`, the `parse()` function checks `suggest_keyword()` when an identifier is at statement position (the first token of a statement, not an assignment LHS). If a match is found, `set_error_hint()` is called before `error_at()` to attach the suggestion.
+
+---
+
+## Changes Made
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `include/reader.h` | Added `get_reader_error()` declaration |
+| `src/reader.c` | Added `#include <errno.h>`; module-level `reader_error_msg[256]`; `get_reader_error()` getter; `fopen` result checked with `errno` for ENOENT/EACCES; empty-file (`size == 0`) detection; OOM check |
+| `src/main.c` | `read_file()` NULL path now calls `get_reader_error()` for the specific message; unknown-command branch emits `Did you mean 'tri run …'?` hint when command ends in `.tri` |
+| `include/error.h` | Added `set_error_hint()` declaration with doc-comment |
+| `src/error.c` | Added `#include <string.h>`; module-level `pending_hint[256]`; `set_error_hint()` implementation; `error_at()` now prints the pending hint (indented, prefixed `Hint:`) after the error line and clears it |
+| `include/lexer.h` | Added `suggest_keyword()` declaration with doc-comment |
+| `src/lexer.c` | Added `suggest_keyword()` with the 11-entry misspelling table |
+| `src/parser.c` | Added `#include "lexer.h"`; in `parse()` IDENT-at-statement-position branch: calls `suggest_keyword()`, sets hint via `set_error_hint()`, then calls `error_at()` |
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `tests/test_keyword_hint.tri` | Verifies `list [1,2,3] -> emt` produces the hint error |
+| `tests/test_keyword_hint.expected` | Expected error + hint message |
+
+---
+
+## Design Decisions
+
+- **`get_reader_error()` getter.** Keeping the error string inside `reader.c` (not returned as a second value or via a global header) avoids changing the `read_file()` signature and is consistent with how errno itself works.
+- **`set_error_hint()` / `error_at()` coupling.** Registering a hint before calling `error_at()` preserves every existing call-site without requiring a new function signature. The hint is auto-cleared after printing, so a subsequent `error_at()` (from a different code path) never sees a stale hint.
+- **Hint only at statement position.** `suggest_keyword()` is called only when an identifier is the first token of a statement (not inside an expression). This avoids false positives for identifiers like `input` or `function` used as variable names inside arithmetic expressions. Assignments (`ident = …`) are handled before this check and are unaffected.
+- **Conservative hint table.** Only 11 near-matches are included — all obvious misspellings of the 8 core keywords. Words that are common generic variable names (e.g. `print`) are intentionally excluded to avoid misleading hints.
+- **No behaviour change for correct programs.** `error_at()` still exits immediately with code 1. Correct programs never hit the new branches. All 20 tests continue to pass.
+
+---
+
+## Verification
+
+```
+$ make clean && make
+$ ./tri run nonexistent.tri              # Error: File 'nonexistent.tri' not found.
+$ ./tri script.tri                       # Error: Unknown command 'script.tri' + hint
+$ ./tri run tests/test_keyword_hint.tri  # Error: Unknown keyword 'list' at line 1 + hint
+$ make test
+# Results: 20 passed, 0 failed
+```
+
+All 20 tests pass on a clean build. No pre-existing test output changed.
+
+---
+
+## Files Touched (summary)
+
+```
+include/reader.h              ← get_reader_error() added
+src/reader.c                  ← errno-based errors; empty-file detection; get_reader_error()
+src/main.c                    ← get_reader_error() used; .tri hint on unknown command
+include/error.h               ← set_error_hint() declared
+src/error.c                   ← set_error_hint(); pending_hint printed in error_at()
+include/lexer.h               ← suggest_keyword() declared
+src/lexer.c                   ← suggest_keyword() with misspelling table
+src/parser.c                  ← #include "lexer.h"; hint check in parse()
+tests/test_keyword_hint.tri   ← new
+tests/test_keyword_hint.expected ← new
+```
+
+---

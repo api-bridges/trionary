@@ -17,4 +17,11 @@ __attribute__((noreturn))
 #endif
 void error_at(int line, const char *fmt, ...);
 
+/* set_error_hint: register a one-line hint to be printed after the next
+ * error_at() call.  The hint is automatically cleared after it is printed.
+ * Call this immediately before error_at() at any site that can provide
+ * actionable guidance (e.g. "Did you mean 'lst'?").
+ */
+void set_error_hint(const char *hint);
+
 #endif
